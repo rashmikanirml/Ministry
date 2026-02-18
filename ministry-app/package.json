@@ -2,15 +2,20 @@
   "name": "ministry-app",
   "version": "0.1.0",
   "private": true,
+  "main": "electron.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "next build && electron-builder"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "dotenv": "^17.3.1",
+    "electron-is-dev": "^3.0.1",
     "next": "16.1.6",
     "prisma": "^5.22.0",
     "react": "19.2.3",
@@ -21,9 +26,19 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "electron-builder": "^26.7.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.ministry.agriculture",
+    "productName": "Ministry Management System",
+    "directories": {
+      "output": "dist"
+    }
   }
 }

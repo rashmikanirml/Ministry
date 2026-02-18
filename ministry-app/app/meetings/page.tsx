@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Meeting = {
   id: number;
@@ -13,12 +13,6 @@ type Meeting = {
   status: "Pending" | "Approved" | "Rejected";
 };
 
-const INITIAL_DATA: Meeting[] = [
-  { id: 1, name: "Emeka Okafor", email: "emeka@ministry.gov.ng", department: "Infrastructure", purpose: "Road Project Budget Review", date: "2026-02-20", time: "10:00", status: "Approved" },
-  { id: 2, name: "Aisha Bello", email: "aisha@ministry.gov.ng", department: "Planning", purpose: "Q1 Development Plan Discussion", date: "2026-02-25", time: "14:00", status: "Pending" },
-  { id: 3, name: "Chidi Nwosu", email: "chidi@ministry.gov.ng", department: "Legal", purpose: "Contract Compliance Review", date: "2026-03-01", time: "09:00", status: "Rejected" },
-];
-
 const EMPTY_FORM = { name: "", email: "", department: "", purpose: "", date: "", time: "" };
 
 const statusStyle: Record<string, string> = {
@@ -28,32 +22,70 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function MeetingRequestPage() {
-  const [meetings, setMeetings]       = useState<Meeting[]>(INITIAL_DATA);
+  const [meetings, setMeetings]       = useState<Meeting[]>([]);
   const [form, setForm]               = useState(EMPTY_FORM);
   const [editingId, setEditingId]     = useState<number | null>(null);
   const [showForm, setShowForm]       = useState(false);
   const [deleteId, setDeleteId]       = useState<number | null>(null);
   const [search, setSearch]           = useState("");
   const [successMsg, setSuccessMsg]   = useState("");
+  const [loading, setLoading]         = useState(true);
 
   const flash = (msg: string) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(""), 3000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId !== null) {
-      setMeetings(meetings.map((m) => m.id === editingId ? { ...m, ...form } : m));
-      flash("Meeting request updated successfully!");
-    } else {
-      const newMeeting: Meeting = { ...form, id: Date.now(), status: "Pending" };
-      setMeetings([newMeeting, ...meetings]);
-      flash("Meeting request submitted successfully!");
+  // Fetch meetings from API
+  const fetchMeetings = async () => {
+    try {
+      const res = await fetch('/api/meetings');
+      const data = await res.json();
+      setMeetings(data);
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setLoading(false);
     }
-    setForm(EMPTY_FORM);
-    setEditingId(null);
-    setShowForm(false);
+  };
+
+  useEffect(() => {
+    fetchMeetings();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingId !== null) {
+        // Update
+        const res = await fetch('/api/meetings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingId, ...form }),
+        });
+        if (res.ok) {
+          flash("Meeting request updated successfully!");
+          fetchMeetings();
+        }
+      } else {
+        // Create
+        const res = await fetch('/api/meetings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (res.ok) {
+          flash("Meeting request submitted successfully!");
+          fetchMeetings();
+        }
+      }
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving meeting:', error);
+      flash("Error saving meeting request.");
+    }
   };
 
   const handleEdit = (m: Meeting) => {
@@ -63,10 +95,17 @@ export default function MeetingRequestPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = (id: number) => {
-    setMeetings(meetings.filter((m) => m.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/meetings?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        flash("Meeting request deleted.");
+        fetchMeetings();
+      }
+    } catch (error) {
+      console.error('Error deleting meeting:', error);
+    }
     setDeleteId(null);
-    flash("Meeting request deleted.");
   };
 
   const handleCancel = () => {
@@ -98,7 +137,7 @@ export default function MeetingRequestPage() {
         <div className="flex items-center gap-3">
           <span className="text-2xl">🏛️</span>
           <div>
-            <p className="font-display font-bold text-base leading-tight">Ministry of National Development</p>
+            <p className="font-display font-bold text-base leading-tight">Ministry of Agriculture</p>
             <p className="text-green-300 text-xs">Meeting Request Management</p>
           </div>
         </div>
@@ -214,7 +253,13 @@ export default function MeetingRequestPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-gray-400 text-sm">
+                    Loading meetings...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-gray-400 text-sm">
                     No meeting requests found.

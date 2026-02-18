@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type TonerRequest = {
   id: number;
@@ -13,42 +13,6 @@ type TonerRequest = {
   notes: string;
   status: "Pending" | "Approved" | "Issued" | "Rejected";
 };
-
-const INITIAL_DATA: TonerRequest[] = [
-  {
-    id: 1,
-    division: "Finance & Accounts",
-    printerName: "HP LaserJet Pro - Finance 01",
-    model: "HP CF217A",
-    requestedBy: "Amina Yusuf",
-    pageCounter: "14,320",
-    date: "2026-02-10",
-    notes: "Toner almost empty, urgent replacement needed.",
-    status: "Approved",
-  },
-  {
-    id: 2,
-    division: "Human Resources",
-    printerName: "Canon imageRUNNER - HR Main",
-    model: "Canon 045H",
-    requestedBy: "Bola Adewale",
-    pageCounter: "8,750",
-    date: "2026-02-14",
-    notes: "Printing quality degrading significantly.",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    division: "ICT Department",
-    printerName: "Brother MFC - ICT Office",
-    model: "Brother TN-2420",
-    requestedBy: "Lawal Sani",
-    pageCounter: "22,100",
-    date: "2026-02-15",
-    notes: "Monthly scheduled toner replacement.",
-    status: "Issued",
-  },
-];
 
 const EMPTY_FORM = {
   division: "",
@@ -88,7 +52,7 @@ const DIVISIONS = [
 ];
 
 export default function TonerRequestPage() {
-  const [requests, setRequests]     = useState<TonerRequest[]>(INITIAL_DATA);
+  const [requests, setRequests]     = useState<TonerRequest[]>([]);
   const [form, setForm]             = useState(EMPTY_FORM);
   const [editingId, setEditingId]   = useState<number | null>(null);
   const [showForm, setShowForm]     = useState(false);
@@ -97,25 +61,63 @@ export default function TonerRequestPage() {
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilter]   = useState("All");
   const [successMsg, setSuccessMsg] = useState("");
+  const [loading, setLoading]       = useState(true);
 
   const flash = (msg: string) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(""), 3000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingId !== null) {
-      setRequests(requests.map((r) => r.id === editingId ? { ...r, ...form } : r));
-      flash("Toner request updated successfully!");
-    } else {
-      const newRequest: TonerRequest = { ...form, id: Date.now(), status: "Pending" };
-      setRequests([newRequest, ...requests]);
-      flash("Toner request submitted successfully!");
+  // Fetch toner requests from API
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch('/api/toners');
+      const data = await res.json();
+      setRequests(data);
+    } catch (error) {
+      console.error('Error fetching toner requests:', error);
+    } finally {
+      setLoading(false);
     }
-    setForm(EMPTY_FORM);
-    setEditingId(null);
-    setShowForm(false);
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingId !== null) {
+        // Update
+        const res = await fetch('/api/toners', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingId, ...form }),
+        });
+        if (res.ok) {
+          flash("Toner request updated successfully!");
+          fetchRequests();
+        }
+      } else {
+        // Create
+        const res = await fetch('/api/toners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (res.ok) {
+          flash("Toner request submitted successfully!");
+          fetchRequests();
+        }
+      }
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving toner request:', error);
+      flash("Error saving toner request.");
+    }
   };
 
   const handleEdit = (r: TonerRequest) => {
@@ -133,10 +135,17 @@ export default function TonerRequestPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = (id: number) => {
-    setRequests(requests.filter((r) => r.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/toners?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        flash("Toner request deleted.");
+        fetchRequests();
+      }
+    } catch (error) {
+      console.error('Error deleting toner request:', error);
+    }
     setDeleteId(null);
-    flash("Toner request deleted.");
   };
 
   const handleCancel = () => {
@@ -377,7 +386,13 @@ export default function TonerRequestPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-14 text-gray-400 text-sm">
+                    Loading toner requests...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-14 text-gray-400 text-sm">
                     🖨️ No toner requests found.

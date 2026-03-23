@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type SessionUser = {
@@ -45,7 +45,50 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [commentByRequest, setCommentByRequest] = useState<Record<number, string>>({});
 
-  const bootstrapAdmin = async () => {
+  const loadRequests = useCallback(async () => {
+    setRequestsLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (type !== "ALL") {
+        params.set("type", type);
+      }
+      if (status !== "ALL") {
+        params.set("status", status);
+      }
+      if (division.trim()) {
+        params.set("division", division.trim());
+      }
+      if (search.trim()) {
+        params.set("search", search.trim());
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+
+      const response = await fetch(`/api/requests?${params.toString()}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        setError("Failed to load requests.");
+        return;
+      }
+
+      const data = (await response.json()) as AppRequest[];
+      setRequests(data);
+    } catch {
+      setError("Unable to load requests right now. Please retry.");
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, [division, search, status, type]);
+
+  const bootstrapAdmin = useCallback(async () => {
+    setLoading(true);
     try {
       const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
       if (!sessionResponse.ok) {
@@ -63,46 +106,19 @@ export default function AdminDashboard() {
 
       setAdmin(sessionData.user);
       setLoading(false);
-      loadRequests();
+      void loadRequests();
+      return;
     } catch {
       setError("Admin dashboard failed to load. Please refresh.");
       setAdmin(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadRequests = async () => {
-    setRequestsLoading(true);
-    setError("");
-    const params = new URLSearchParams();
-    if (type !== "ALL") {
-      params.set("type", type);
-    }
-    if (status !== "ALL") {
-      params.set("status", status);
-    }
-    if (division.trim()) {
-      params.set("division", division.trim());
-    }
-    if (search.trim()) {
-      params.set("search", search.trim());
-    }
-
-    const response = await fetch(`/api/requests?${params.toString()}`, { cache: "no-store" });
-    if (!response.ok) {
-      setError("Failed to load requests.");
-      setRequestsLoading(false);
-      return;
-    }
-    const data = (await response.json()) as AppRequest[];
-    setRequests(data);
-    setRequestsLoading(false);
-  };
+  }, [loadRequests]);
 
   useEffect(() => {
-    bootstrapAdmin();
-  }, []);
+    void bootstrapAdmin();
+  }, [bootstrapAdmin]);
 
   const updateStatus = async (id: number, action: "APPROVE" | "REJECT") => {
     const response = await fetch(`/api/requests/${id}`, {

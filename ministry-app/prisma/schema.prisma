@@ -10,33 +10,108 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Meeting {
-  id         Int      @id @default(autoincrement())
-  name       String
-  email      String
-  department String
-  purpose    String
-  date       String
-  time       String
-  status     String   @default("Pending")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+enum Role {
+  USER
+  ADMIN
+}
 
-  @@map("meetings")
+enum RequestType {
+  TONER
+  MULTIMEDIA
+  REPAIR
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RepairPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  username     String    @unique
+  passwordHash String
+  role         Role      @default(USER)
+  division     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  requests     Request[]
+
+  @@map("users")
+}
+
+model Request {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  division      String
+  requestType   RequestType
+  description   String
+  status        RequestStatus     @default(PENDING)
+  adminComments String?
+  dateSubmitted DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id])
+  toner         TonerRequest?
+  multimedia    MultimediaRequest?
+  repair        RepairRequest?
+
+  @@index([division])
+  @@index([requestType])
+  @@index([status])
+  @@map("requests")
 }
 
 model TonerRequest {
-  id          Int      @id @default(autoincrement())
-  division    String
-  printerName String
-  model       String
-  requestedBy String
-  pageCounter String
-  date        String
-  notes       String?
-  status      String   @default("Pending")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int     @id @default(autoincrement())
+  requestId     Int     @unique
+  printerSerial String
+  printerModel  String
+  request       Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
+  @@index([printerSerial])
   @@map("toner_requests")
+}
+
+model MultimediaRequest {
+  id            Int      @id @default(autoincrement())
+  requestId     Int      @unique
+  equipmentType String
+  dateTime      DateTime
+  meetingDetails String
+  request       Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentType])
+  @@map("multimedia_requests")
+}
+
+model RepairRequest {
+  id             Int            @id @default(autoincrement())
+  requestId      Int            @unique
+  computerSerial String
+  issue          String
+  priority       RepairPriority
+  request        Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([computerSerial])
+  @@index([priority])
+  @@map("repair_requests")
+}
+
+model Printer {
+  id         Int      @id @default(autoincrement())
+  serialCode String   @unique
+  model      String
+  division   String
+  createdAt  DateTime @default(now())
+
+  @@index([division])
+  @@map("printers")
 }

@@ -35,6 +35,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [admin, setAdmin] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requestsLoading, setRequestsLoading] = useState(false);
   const [requests, setRequests] = useState<AppRequest[]>([]);
   const [error, setError] = useState("");
 
@@ -61,7 +62,8 @@ export default function AdminDashboard() {
       }
 
       setAdmin(sessionData.user);
-      await loadRequests();
+      setLoading(false);
+      loadRequests();
     } catch {
       setError("Admin dashboard failed to load. Please refresh.");
       setAdmin(null);
@@ -71,6 +73,7 @@ export default function AdminDashboard() {
   };
 
   const loadRequests = async () => {
+    setRequestsLoading(true);
     setError("");
     const params = new URLSearchParams();
     if (type !== "ALL") {
@@ -89,10 +92,12 @@ export default function AdminDashboard() {
     const response = await fetch(`/api/requests?${params.toString()}`, { cache: "no-store" });
     if (!response.ok) {
       setError("Failed to load requests.");
+      setRequestsLoading(false);
       return;
     }
     const data = (await response.json()) as AppRequest[];
     setRequests(data);
+    setRequestsLoading(false);
   };
 
   useEffect(() => {
@@ -204,6 +209,7 @@ export default function AdminDashboard() {
       <section className="panel">
         <h2>All Requests and History</h2>
         {error ? <p className="error-text">{error}</p> : null}
+        {requestsLoading ? <p className="auth-subtitle">Loading requests...</p> : null}
         <div className="table-wrap">
           <table>
             <thead>

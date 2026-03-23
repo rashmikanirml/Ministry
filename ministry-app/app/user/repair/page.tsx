@@ -96,7 +96,7 @@ export default function RepairCrudPage() {
   }
 
   return (
-    <UserPageShell user={user} title="Repair Request CRUD" subtitle="Create, edit, delete, and track repair requests.">
+    <UserPageShell user={user} title="Repair Machines" subtitle="Create, edit, delete, and track repair requests.">
       <section className="panel">
         <h2>{editingId ? "Edit Repair Request" : "Create Repair Request"}</h2>
         <form className="request-form" onSubmit={onSubmit}>

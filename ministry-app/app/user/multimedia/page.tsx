@@ -98,7 +98,7 @@ export default function MultimediaCrudPage() {
   return (
     <UserPageShell
       user={user}
-      title="Multimedia Request CRUD"
+      title="Multimedia Request"
       subtitle="Create, edit, delete, and track multimedia equipment requests."
     >
       <section className="panel">

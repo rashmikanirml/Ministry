@@ -25,13 +25,6 @@ type AppRequest = {
   repair?: { computerSerial: string; issue: string; priority: string } | null;
 };
 
-type Printer = {
-  id: number;
-  serialCode: string;
-  model: string;
-  division: string;
-};
-
 const STATUS_COLOR: Record<AppRequest["status"], string> = {
   PENDING: "pill pending",
   APPROVED: "pill approved",
@@ -49,12 +42,6 @@ export default function AdminDashboard() {
   const [status, setStatus] = useState("ALL");
   const [division, setDivision] = useState("");
   const [search, setSearch] = useState("");
-
-  const [serialSearch, setSerialSearch] = useState("");
-  const [printerDivision, setPrinterDivision] = useState("");
-  const [printers, setPrinters] = useState<Printer[]>([]);
-
-  const [commentByRequest, setCommentByRequest] = useState<Record<number, string>>({});
 
   const loadRequests = async () => {
     const params = new URLSearchParams();
@@ -80,24 +67,6 @@ export default function AdminDashboard() {
     setRequests(data);
   };
 
-  const loadPrinters = async () => {
-    const params = new URLSearchParams();
-    if (printerDivision.trim()) {
-      params.set("division", printerDivision.trim());
-    }
-    if (serialSearch.trim()) {
-      params.set("serial", serialSearch.trim());
-    }
-
-    const response = await fetch(`/api/printers?${params.toString()}`, { cache: "no-store" });
-    if (!response.ok) {
-      return;
-    }
-
-    const data = (await response.json()) as Printer[];
-    setPrinters(data);
-  };
-
   useEffect(() => {
     const bootstrap = async () => {
       const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
@@ -120,25 +89,6 @@ export default function AdminDashboard() {
     bootstrap();
   }, [router]);
 
-  const updateStatus = async (id: number, action: "APPROVE" | "REJECT") => {
-    const response = await fetch(`/api/requests/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action,
-        adminComments: commentByRequest[id] || "",
-      }),
-    });
-
-    if (!response.ok) {
-      setError("Failed to update request status.");
-      return;
-    }
-
-    setError("");
-    await loadRequests();
-  };
-
   const onLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
@@ -153,7 +103,7 @@ export default function AdminDashboard() {
       <header className="dashboard-header">
         <div>
           <p className="eyebrow">Admin Dashboard</p>
-          <h1>Request Approval Center</h1>
+          <h1>View Every Request</h1>
           <p>Signed in as {admin.name}</p>
         </div>
         <button type="button" onClick={onLogout}>
@@ -204,53 +154,6 @@ export default function AdminDashboard() {
       </section>
 
       <section className="panel">
-        <h2>Printer Verification Panel</h2>
-        <div className="three-cols">
-          <label>
-            Division
-            <input
-              value={printerDivision}
-              onChange={(event) => setPrinterDivision(event.target.value)}
-            />
-          </label>
-          <label>
-            Serial Code
-            <input value={serialSearch} onChange={(event) => setSerialSearch(event.target.value)} />
-          </label>
-          <button type="button" onClick={loadPrinters}>
-            Search Printers
-          </button>
-        </div>
-
-        <div className="table-wrap compact">
-          <table>
-            <thead>
-              <tr>
-                <th>Serial Code</th>
-                <th>Model</th>
-                <th>Division</th>
-              </tr>
-            </thead>
-            <tbody>
-              {printers.length === 0 ? (
-                <tr>
-                  <td colSpan={3}>No printer records found.</td>
-                </tr>
-              ) : (
-                printers.map((printer) => (
-                  <tr key={printer.id}>
-                    <td>{printer.serialCode}</td>
-                    <td>{printer.model}</td>
-                    <td>{printer.division}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="panel">
         <h2>All Requests and History</h2>
         {error ? <p className="error-text">{error}</p> : null}
         <div className="table-wrap">
@@ -264,13 +167,12 @@ export default function AdminDashboard() {
                 <th>Details</th>
                 <th>Status</th>
                 <th>Admin Comment</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>No requests found.</td>
+                  <td colSpan={7}>No requests found.</td>
                 </tr>
               ) : (
                 requests.map((item) => (
@@ -304,33 +206,7 @@ export default function AdminDashboard() {
                     <td>
                       <span className={STATUS_COLOR[item.status]}>{item.status}</span>
                     </td>
-                    <td>
-                      <textarea
-                        value={commentByRequest[item.id] ?? item.adminComments ?? ""}
-                        onChange={(event) =>
-                          setCommentByRequest((current) => ({ ...current, [item.id]: event.target.value }))
-                        }
-                        placeholder="Optional admin comments"
-                      />
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button
-                          type="button"
-                          disabled={item.status !== "PENDING"}
-                          onClick={() => updateStatus(item.id, "APPROVE")}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          disabled={item.status !== "PENDING"}
-                          onClick={() => updateStatus(item.id, "REJECT")}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </td>
+                    <td>{item.adminComments || "-"}</td>
                   </tr>
                 ))
               )}

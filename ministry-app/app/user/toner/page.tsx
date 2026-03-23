@@ -92,7 +92,7 @@ export default function TonerCrudPage() {
   }
 
   return (
-    <UserPageShell user={user} title="Toner Request CRUD" subtitle="Create, edit, delete, and track toner requests.">
+    <UserPageShell user={user} title="Toner Request" subtitle="Create, edit, delete, and track toner requests.">
       <section className="panel">
         <h2>{editingId ? "Edit Toner Request" : "Create Toner Request"}</h2>
         <form className="request-form" onSubmit={onSubmit}>

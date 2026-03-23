@@ -187,9 +187,9 @@ function ChatbotWidget() {
 
 const links = [
   { href: "/user", label: "Home" },
-  { href: "/user/toner", label: "Toner CRUD" },
-  { href: "/user/multimedia", label: "Multimedia CRUD" },
-  { href: "/user/repair", label: "Repair CRUD" },
+  { href: "/user/toner", label: "Toner Request" },
+  { href: "/user/multimedia", label: "Multimedia Request" },
+  { href: "/user/repair", label: "Repair Machines" },
   { href: "/user/requests", label: "All Requests Dashboard" },
 ];
 

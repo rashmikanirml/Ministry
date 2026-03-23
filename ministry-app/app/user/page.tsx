@@ -58,15 +58,15 @@ export default function UserHomePage() {
 
       <section className="card-grid">
         <Link href="/user/toner" className="module-card">
-          <h3>Toner CRUD</h3>
+          <h3>Toner Request</h3>
           <p>Create, update, delete, and review toner requests.</p>
         </Link>
         <Link href="/user/multimedia" className="module-card">
-          <h3>Multimedia CRUD</h3>
+          <h3>Multimedia Request</h3>
           <p>Manage multimedia equipment requests for meetings.</p>
         </Link>
         <Link href="/user/repair" className="module-card">
-          <h3>Repair CRUD</h3>
+          <h3>Repair Machines</h3>
           <p>Track computer repair tickets and priority levels.</p>
         </Link>
         <Link href="/user/requests" className="module-card">

@@ -17,21 +17,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
     const bootstrap = async () => {
       const response = await fetch("/api/auth/me", { cache: "no-store" });
       if (!response.ok) {
+        setSessionUser(null);
         return;
       }
       const data = (await response.json()) as { authenticated: boolean; user: SessionUser };
       if (data.authenticated) {
-        router.replace(data.user.role === "ADMIN" ? "/admin" : "/user");
+        setSessionUser(data.user);
       }
     };
 
     bootstrap();
-  }, [router]);
+  }, []);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -55,6 +57,39 @@ export default function LoginPage() {
     const user = data.user as SessionUser;
     router.replace(user.role === "ADMIN" ? "/admin" : "/user");
   };
+
+  const switchAccount = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setSessionUser(null);
+    setUsername("");
+    setPassword("");
+    setError("");
+  };
+
+  if (sessionUser) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p className="auth-eyebrow">Current Session</p>
+          <h1>You are already signed in</h1>
+          <p className="auth-subtitle">
+            User: <strong>{sessionUser.username}</strong> | Role: <strong>{sessionUser.role}</strong>
+          </p>
+          <div className="action-row" style={{ marginTop: "1rem" }}>
+            <button
+              type="button"
+              onClick={() => router.replace(sessionUser.role === "ADMIN" ? "/admin" : "/user")}
+            >
+              Continue to Dashboard
+            </button>
+            <button type="button" className="muted-btn" onClick={switchAccount}>
+              Switch Account
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="auth-shell">

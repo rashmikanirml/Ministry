@@ -42,8 +42,10 @@ export default function AdminDashboard() {
   const [status, setStatus] = useState("ALL");
   const [division, setDivision] = useState("");
   const [search, setSearch] = useState("");
+  const [commentByRequest, setCommentByRequest] = useState<Record<number, string>>({});
 
   const loadRequests = async () => {
+    setError("");
     const params = new URLSearchParams();
     if (type !== "ALL") {
       params.set("type", type);
@@ -69,25 +71,48 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const bootstrap = async () => {
-      const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
-      if (!sessionResponse.ok) {
-        router.replace("/login");
-        return;
-      }
+      try {
+        const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!sessionResponse.ok) {
+          router.replace("/login");
+          return;
+        }
 
-      const sessionData = (await sessionResponse.json()) as { user: SessionUser };
-      if (sessionData.user.role !== "ADMIN") {
-        router.replace("/user");
-        return;
-      }
+        const sessionData = (await sessionResponse.json()) as { user: SessionUser };
+        if (sessionData.user.role !== "ADMIN") {
+          router.replace("/user");
+          return;
+        }
 
-      setAdmin(sessionData.user);
-      await loadRequests();
-      setLoading(false);
+        setAdmin(sessionData.user);
+        await loadRequests();
+      } catch {
+        setError("Admin dashboard failed to load. Please refresh.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     bootstrap();
   }, [router]);
+
+  const updateStatus = async (id: number, action: "APPROVE" | "REJECT") => {
+    const response = await fetch(`/api/requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        adminComments: commentByRequest[id] || "",
+      }),
+    });
+
+    if (!response.ok) {
+      setError("Failed to update request status.");
+      return;
+    }
+
+    await loadRequests();
+  };
 
   const onLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -103,7 +128,7 @@ export default function AdminDashboard() {
       <header className="dashboard-header">
         <div>
           <p className="eyebrow">Admin Dashboard</p>
-          <h1>View Every Request</h1>
+          <h1>Request Approval Dashboard</h1>
           <p>Signed in as {admin.name}</p>
         </div>
         <button type="button" onClick={onLogout}>
@@ -167,12 +192,13 @@ export default function AdminDashboard() {
                 <th>Details</th>
                 <th>Status</th>
                 <th>Admin Comment</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {requests.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>No requests found.</td>
+                  <td colSpan={8}>No requests found.</td>
                 </tr>
               ) : (
                 requests.map((item) => (
@@ -206,7 +232,33 @@ export default function AdminDashboard() {
                     <td>
                       <span className={STATUS_COLOR[item.status]}>{item.status}</span>
                     </td>
-                    <td>{item.adminComments || "-"}</td>
+                    <td>
+                      <textarea
+                        value={commentByRequest[item.id] ?? item.adminComments ?? ""}
+                        onChange={(event) =>
+                          setCommentByRequest((current) => ({ ...current, [item.id]: event.target.value }))
+                        }
+                        placeholder="Optional admin comments"
+                      />
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          type="button"
+                          disabled={item.status !== "PENDING"}
+                          onClick={() => updateStatus(item.id, "APPROVE")}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          disabled={item.status !== "PENDING"}
+                          onClick={() => updateStatus(item.id, "REJECT")}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

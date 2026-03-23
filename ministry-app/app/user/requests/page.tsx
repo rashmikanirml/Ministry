@@ -6,11 +6,13 @@ import { AppRequest, STATUS_COLOR, UserPageShell, useRequireUser } from "../_sha
 export default function UserAllRequestsPage() {
   const { user, loading } = useRequireUser();
   const [requests, setRequests] = useState<AppRequest[]>([]);
+  const [error, setError] = useState("");
   const [type, setType] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [search, setSearch] = useState("");
 
   const loadRequests = async (nextType = type, nextStatus = status, nextSearch = search) => {
+    setError("");
     const params = new URLSearchParams();
     if (nextType !== "ALL") {
       params.set("type", nextType);
@@ -24,6 +26,7 @@ export default function UserAllRequestsPage() {
 
     const response = await fetch(`/api/requests?${params.toString()}`, { cache: "no-store" });
     if (!response.ok) {
+      setError("Failed to load your requests.");
       return;
     }
     const data = (await response.json()) as AppRequest[];
@@ -34,6 +37,7 @@ export default function UserAllRequestsPage() {
     const bootstrap = async () => {
       const response = await fetch("/api/requests", { cache: "no-store" });
       if (!response.ok) {
+        setError("Failed to load your requests.");
         return;
       }
       const data = (await response.json()) as AppRequest[];
@@ -86,6 +90,7 @@ export default function UserAllRequestsPage() {
 
       <section className="panel">
         <h2>Request Records</h2>
+        {error ? <p className="error-text">{error}</p> : null}
         <div className="table-wrap">
           <table>
             <thead>

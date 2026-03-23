@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -133,6 +134,9 @@ export default function LoginPage() {
           <p>Seed accounts:</p>
           <p>Admin: admin / admin123</p>
           <p>User: staff / user123</p>
+          <p>
+            New staff user? <Link href="/register">Register here</Link>
+          </p>
         </div>
       </section>
     </main>

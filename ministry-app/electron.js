@@ -19,11 +19,8 @@ function createWindow() {
     backgroundColor: '#f8f5f0',
   });
 
-  // Load the app
-  const startUrl = isDev
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, 'out/index.html')}`;
-
+  // Load the app from a running Next.js server.
+  const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:3000';
   mainWindow.loadURL(startUrl);
 
   // Open DevTools in development

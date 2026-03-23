@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ministry of National Development",
-  description: "Official Government Platform — Federal Republic",
+  title: "MRRMS - Ministry Resource Request Management System",
+  description: "Role-based ministry request platform for toner, multimedia, and computer repair workflows.",
 };
 
 export default function RootLayout({

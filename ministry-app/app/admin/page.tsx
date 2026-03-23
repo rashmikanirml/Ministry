@@ -44,6 +44,32 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [commentByRequest, setCommentByRequest] = useState<Record<number, string>>({});
 
+  const bootstrapAdmin = async () => {
+    try {
+      const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!sessionResponse.ok) {
+        setError("Your session expired. Please login again.");
+        setAdmin(null);
+        return;
+      }
+
+      const sessionData = (await sessionResponse.json()) as { user: SessionUser };
+      if (sessionData.user.role !== "ADMIN") {
+        setError("Only admin accounts can access this dashboard.");
+        setAdmin(null);
+        return;
+      }
+
+      setAdmin(sessionData.user);
+      await loadRequests();
+    } catch {
+      setError("Admin dashboard failed to load. Please refresh.");
+      setAdmin(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadRequests = async () => {
     setError("");
     const params = new URLSearchParams();
@@ -70,31 +96,8 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const bootstrap = async () => {
-      try {
-        const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
-        if (!sessionResponse.ok) {
-          router.replace("/login");
-          return;
-        }
-
-        const sessionData = (await sessionResponse.json()) as { user: SessionUser };
-        if (sessionData.user.role !== "ADMIN") {
-          router.replace("/user");
-          return;
-        }
-
-        setAdmin(sessionData.user);
-        await loadRequests();
-      } catch {
-        setError("Admin dashboard failed to load. Please refresh.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    bootstrap();
-  }, [router]);
+    bootstrapAdmin();
+  }, []);
 
   const updateStatus = async (id: number, action: "APPROVE" | "REJECT") => {
     const response = await fetch(`/api/requests/${id}`, {
@@ -119,8 +122,28 @@ export default function AdminDashboard() {
     router.replace("/login");
   };
 
-  if (loading || !admin) {
+  if (loading) {
     return <main className="loading-screen">Loading admin dashboard...</main>;
+  }
+
+  if (!admin) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p className="auth-eyebrow">Admin Access</p>
+          <h1>Unable to open dashboard</h1>
+          <p className="auth-subtitle">{error || "Please retry or login again."}</p>
+          <div className="action-row" style={{ marginTop: "1rem" }}>
+            <button type="button" onClick={bootstrapAdmin}>
+              Retry
+            </button>
+            <button type="button" className="muted-btn" onClick={() => router.replace("/login")}>
+              Go to Login
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
